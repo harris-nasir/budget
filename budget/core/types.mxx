@@ -1,0 +1,62 @@
+module;
+
+#include <chrono>
+#include <cstdint>
+
+export module budget.core:types;
+
+export namespace budget::types
+{
+using period_id = std::uint64_t;
+using category_id = std::uint64_t;
+using transaction_id = std::uint64_t;
+using item_id = std::uint64_t;
+using date = std::chrono::year_month_day;
+using amount = std::uint32_t;
+
+enum class transaction_type : std::uint8_t
+{
+    income,
+    expense,
+};
+
+struct period
+{
+    period_id id;
+    std::chrono::year_month year_month;
+};
+
+struct category
+{
+    category_id id;
+    period_id period_id;
+    std::string name;
+};
+
+struct category_budget
+{
+    category_id category_id;
+    period_id period_id;
+    amount allocated;
+};
+
+struct item
+{
+    item_id id;
+    category_id category_id;
+    std::string name;
+    amount expected;
+};
+
+struct transaction
+{
+    transaction_id id;
+    std::optional<category_id> category_id;
+    std::optional<item_id> item_id;
+    transaction_type type;
+    std::string description;
+    amount amount;
+    date timestamp;
+};
+
+} // namespace budget::types

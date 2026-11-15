@@ -1,0 +1,16 @@
+import doctest = doctest%lib{doctest}
+
+dir{.}: lib{budget-core}: {mxx}{book core month types}
+{
+  bin.binless = true
+  install = false
+}
+
+dir{.}: exe{tests/month.test...}: cxx{tests/month.test...} lib{budget-core} $doctest
+dir{.}: exe{tests/book.test...}: cxx{tests/book.test...} lib{budget-core} $doctest
+
+exe{tests/month.test... tests/book.test...}:
+{
+  test = true
+  install = false
+}

@@ -1,0 +1,12 @@
+: 1
+name: budget
+version: 0.1.0-a.0.z
+language: c++
+summary: budget C++ executable
+license: other: proprietary ; Not free/open source.
+description-file: README.md
+# url: https://example.org/budget
+email: harrisnasir@protonmail.com
+depends: * build2 >= 0.18.0
+depends: * bpkg >= 0.18.0
+depends: doctest ^2.4.11

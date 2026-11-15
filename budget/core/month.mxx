@@ -1,0 +1,135 @@
+module;
+
+#include <chrono>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
+
+export module budget.core:month;
+
+import :types;
+
+export namespace budget
+{
+class month
+{
+  public:
+    explicit month(budget::types::period period) : period_(period)
+    {
+    }
+
+    [[nodiscard]]
+    budget::types::category_id create_category(std::string_view name, budget::types::amount allocated = 0)
+    {
+        const auto new_category_id = category_id_ + 1;
+
+        const auto category = budget::types::category{
+            .id = new_category_id,
+            .period_id = period_.id,
+            .name = std::string{name},
+        };
+
+        const auto category_budget = budget::types::category_budget{
+            .category_id = new_category_id,
+            .period_id = period_.id,
+            .allocated = allocated,
+        };
+
+        categories_.push_back(category);
+        try
+        {
+            category_budgets_.push_back(category_budget);
+        }
+        catch (...)
+        {
+            categories_.pop_back();
+            throw;
+        }
+
+        category_id_ = new_category_id;
+        return category_id_;
+    }
+
+    [[nodiscard]]
+    budget::types::item_id create_item(std::string_view name, budget::types::category_id category_id,
+                                       budget::types::amount amount)
+    {
+        const auto new_item_id = item_id_ + 1;
+
+        const auto item = budget::types::item{
+            .id = new_item_id,
+            .category_id = category_id,
+            .name = std::string{name},
+            .expected = amount,
+        };
+
+        items_.push_back(item);
+
+        item_id_ = new_item_id;
+        return item_id_;
+    }
+
+    budget::types::transaction_id create_transaction(
+        std::string_view description, budget::types::transaction_type type, budget::types::amount amount,
+        std::optional<budget::types::category_id> category_id = std::nullopt,
+        std::optional<budget::types::item_id> item_id = std::nullopt)
+    {
+        const auto new_transaction_id = transaction_id_ + 1;
+
+        using namespace std::chrono;
+        const auto local = current_zone()->to_local(system_clock::now());
+        const year_month_day today{std::chrono::floor<std::chrono::days>(local)};
+
+        auto transaction = budget::types::transaction{
+            .id = new_transaction_id,
+            .category_id = category_id,
+            .item_id = item_id,
+            .type = type,
+            .description = std::string{description},
+            .amount = amount,
+            .timestamp = period_.year_month / today.day(),
+        };
+
+        transactions_.push_back(transaction);
+
+        transaction_id_ = new_transaction_id;
+        return transaction_id_;
+    }
+
+    [[nodiscard]]
+    std::vector<budget::types::category> categories() const
+    {
+        return categories_;
+    }
+
+    [[nodiscard]]
+    std::vector<budget::types::category_budget> category_budgets() const
+    {
+        return category_budgets_;
+    }
+
+    [[nodiscard]]
+    std::vector<budget::types::item> items() const
+    {
+        return items_;
+    }
+
+    [[nodiscard]]
+    std::vector<budget::types::transaction> transactions() const
+    {
+        return transactions_;
+    }
+
+  private:
+    budget::types::category_id category_id_{};
+    budget::types::item_id item_id_{};
+    budget::types::transaction_id transaction_id_{};
+
+    budget::types::period period_;
+    std::vector<budget::types::category> categories_;
+    std::vector<budget::types::category_budget> category_budgets_;
+    std::vector<budget::types::item> items_;
+    std::vector<budget::types::transaction> transactions_;
+};
+} // namespace budget

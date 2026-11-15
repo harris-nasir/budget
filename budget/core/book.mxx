@@ -1,0 +1,36 @@
+module;
+
+#include <chrono>
+
+export module budget.core:book;
+
+import :types;
+import :month;
+
+export namespace budget
+{
+class book
+{
+  public:
+    [[nodiscard]]
+    budget::month create_budget(std::chrono::year_month year_month)
+    {
+        const auto new_period_id = period_id_ + 1;
+
+        budget::month month({
+            .id = new_period_id,
+            .year_month = year_month,
+        });
+
+        months_.push_back(month);
+
+        period_id_ = new_period_id;
+        return month;
+    }
+
+  private:
+    budget::types::period_id period_id_{};
+
+    std::vector<budget::month> months_;
+};
+} // namespace budget

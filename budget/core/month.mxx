@@ -98,6 +98,12 @@ class month
     }
 
     [[nodiscard]]
+    budget::types::period period() const
+    {
+        return period_;
+    }
+
+    [[nodiscard]]
     std::vector<budget::types::category> categories() const
     {
         return categories_;

@@ -28,6 +28,39 @@ class book
         return month;
     }
 
+    [[nodiscard]]
+    bool contains_budget(std::chrono::year_month year_month) const
+    {
+        for (const auto &month : months_)
+        {
+            if (month.period().year_month == year_month)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool reset_budget(std::chrono::year_month year_month)
+    {
+        for (auto &month : months_)
+        {
+            if (month.period().year_month == year_month)
+            {
+                const auto period = month.period();
+                month = budget::month{period};
+                return true;
+            }
+        }
+        return false;
+    }
+
+    [[nodiscard]]
+    std::vector<budget::month> months() const
+    {
+        return months_;
+    }
+
   private:
     budget::types::period_id period_id_{};
 

@@ -4,19 +4,21 @@ module;
 
 export module budget.cli;
 
+import budget.application;
+
 import :month;
 
 export namespace budget::cli
 {
-auto run(int argc, char *argv[]) -> int
+auto run(int argc, char *argv[], budget::application::book_repository &repository) -> int
 {
     CLI::App app{"Budget"};
 
-    month::options options;
-    month::add_commands(app, options);
+    month::month_options options;
+    month::add_month_commands(app, options, repository);
 
     CLI11_PARSE(app, argc, argv);
 
-    return 0;
+    return options.exit_code;
 }
 } // namespace budget::cli

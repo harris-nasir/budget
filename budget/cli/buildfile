@@ -1,7 +1,14 @@
 import cli11 = cli11%lib{cli11}
+import doctest = doctest%lib{doctest}
 
-dir{.}: lib{budget-cli}: {mxx}{cli month} $cli11
+dir{.}: lib{budget-cli}: {mxx}{cli month} ../application/lib{budget-application} $cli11
 {
   bin.binless = true
+  install = false
+}
+
+dir{.}: exe{tests/month.test...}: cxx{tests/month.test...} lib{budget-cli} ../application/lib{budget-application} ../core/lib{budget-core} $doctest
+{
+  test = true
   install = false
 }

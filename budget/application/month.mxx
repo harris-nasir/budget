@@ -3,7 +3,6 @@ module;
 #include <chrono>
 #include <optional>
 #include <tuple>
-#include <vector>
 
 export module budget.application:month;
 

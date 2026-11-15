@@ -1,0 +1,15 @@
+export module budget.application.repository;
+
+import budget.core;
+
+export namespace budget::application
+{
+class book_repository
+{
+  public:
+    virtual ~book_repository() = default;
+
+    virtual budget::core::book load() = 0;
+    virtual void save(const budget::core::book &book) = 0;
+};
+} // namespace budget::application

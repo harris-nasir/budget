@@ -1,0 +1,12 @@
+export module budget.application;
+
+export import budget.application.repository;
+import :month;
+
+export namespace budget::application
+{
+using ::budget::application::month::create_month;
+using ::budget::application::month::create_month_request;
+using ::budget::application::month::create_month_result;
+
+} // namespace budget::application

@@ -1,0 +1,55 @@
+module;
+
+#include <chrono>
+#include <optional>
+#include <tuple>
+#include <vector>
+
+export module budget.application:month;
+
+import budget.application.repository;
+import budget.core;
+
+export namespace budget::application::month
+{
+struct create_month_request
+{
+    std::optional<std::chrono::year_month> year_month;
+    bool force{};
+};
+
+enum class create_month_result
+{
+    created,
+    reset,
+    already_exists,
+    missing_month,
+};
+
+inline auto create_month(budget::application::book_repository &repository, const create_month_request &request)
+    -> create_month_result
+{
+    if (!request.year_month)
+    {
+        return create_month_result::missing_month;
+    }
+
+    auto book = repository.load();
+    const auto year_month = *request.year_month;
+
+    if (request.force && book.reset_budget(year_month))
+    {
+        repository.save(book);
+        return create_month_result::reset;
+    }
+
+    if (book.contains_budget(year_month))
+    {
+        return create_month_result::already_exists;
+    }
+
+    std::ignore = book.create_budget(year_month);
+    repository.save(book);
+    return create_month_result::created;
+}
+} // namespace budget::application::month

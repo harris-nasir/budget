@@ -1,0 +1,22 @@
+module;
+
+#include <CLI/CLI.hpp>
+
+export module budget.cli;
+
+import :month;
+
+export namespace budget::cli
+{
+auto run(int argc, char *argv[]) -> int
+{
+    CLI::App app{"Budget"};
+
+    month::options options;
+    month::add_commands(app, options);
+
+    CLI11_PARSE(app, argc, argv);
+
+    return 0;
+}
+} // namespace budget::cli

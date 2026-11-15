@@ -1,0 +1,7 @@
+import cli11 = cli11%lib{cli11}
+
+dir{.}: lib{budget-cli}: {mxx}{cli month} $cli11
+{
+  bin.binless = true
+  install = false
+}

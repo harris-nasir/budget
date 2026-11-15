@@ -1,6 +1,8 @@
 cxx.poptions =+ "-I$out_root" "-I$src_root"
 
 include core/
+include cli/
 
-dir{.}: exe{budget}: cxx{budget} core/lib{budget-core}
+dir{.}: exe{budget}: cxx{main} core/lib{budget-core} cli/lib{budget-cli}
 dir{.}: core/
+dir{.}: cli/

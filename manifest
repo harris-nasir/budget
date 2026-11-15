@@ -10,3 +10,4 @@ email: harrisnasir@protonmail.com
 depends: * build2 >= 0.18.0
 depends: * bpkg >= 0.18.0
 depends: doctest ^2.4.11
+depends: cli11 ^2.2.0

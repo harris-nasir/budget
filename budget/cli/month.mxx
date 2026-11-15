@@ -1,0 +1,28 @@
+module;
+
+#include <string>
+
+#include <CLI/CLI.hpp>
+
+export module budget.cli:month;
+
+export namespace budget::cli::month
+{
+struct options
+{
+    std::string new_date;
+    bool force{};
+    std::string list_date;
+};
+
+void add_commands(CLI::App &app, options &command_options)
+{
+    auto *month_command = app.add_subcommand("month", "Manage budget months");
+    auto *new_command = month_command->add_subcommand("new", "Make a new budget month");
+    auto *list_command = month_command->add_subcommand("list", "List budget months");
+
+    new_command->add_option("date", command_options.new_date, "Month in YYYY-MM format");
+    new_command->add_flag("--force", command_options.force, "Reset the month if it already exists");
+    list_command->add_option("date", command_options.list_date, "Month in YYYY-MM format");
+}
+} // namespace budget::cli::month

@@ -11,6 +11,7 @@ using ::budget::month;
 using ::budget::types::amount;
 using ::budget::types::category;
 using ::budget::types::category_budget;
+using ::budget::types::category_error;
 using ::budget::types::category_id;
 using ::budget::types::date;
 using ::budget::types::item;

@@ -47,8 +47,8 @@ TEST_CASE("list_months returns every stored month in order without a filter")
     const auto second_month = year{2026} / November;
 
     fake_book_repository repository;
-    std::ignore = repository.stored_book.create_budget(first_month);
-    std::ignore = repository.stored_book.create_budget(second_month);
+    repository.stored_book.create_budget(first_month);
+    repository.stored_book.create_budget(second_month);
 
     const auto response = budget::application::list_months(repository);
 
@@ -68,9 +68,9 @@ TEST_CASE("list_months returns the requested month and later months when only fr
     const auto third_month = year{2026} / December;
 
     fake_book_repository repository;
-    std::ignore = repository.stored_book.create_budget(first_month);
-    std::ignore = repository.stored_book.create_budget(second_month);
-    std::ignore = repository.stored_book.create_budget(third_month);
+    repository.stored_book.create_budget(first_month);
+    repository.stored_book.create_budget(second_month);
+    repository.stored_book.create_budget(third_month);
 
     const auto response = budget::application::list_months(repository, {.from = second_month});
 
@@ -90,9 +90,9 @@ TEST_CASE("list_months returns earlier months through to when only to is provide
     const auto third_month = year{2026} / December;
 
     fake_book_repository repository;
-    std::ignore = repository.stored_book.create_budget(first_month);
-    std::ignore = repository.stored_book.create_budget(second_month);
-    std::ignore = repository.stored_book.create_budget(third_month);
+    repository.stored_book.create_budget(first_month);
+    repository.stored_book.create_budget(second_month);
+    repository.stored_book.create_budget(third_month);
 
     const auto response = budget::application::list_months(repository, {.to = second_month});
 
@@ -112,9 +112,9 @@ TEST_CASE("list_months includes both endpoints of a requested range")
     const auto third_month = year{2026} / December;
 
     fake_book_repository repository;
-    std::ignore = repository.stored_book.create_budget(first_month);
-    std::ignore = repository.stored_book.create_budget(second_month);
-    std::ignore = repository.stored_book.create_budget(third_month);
+    repository.stored_book.create_budget(first_month);
+    repository.stored_book.create_budget(second_month);
+    repository.stored_book.create_budget(third_month);
 
     const auto response = budget::application::list_months(repository, {.from = first_month, .to = second_month});
 
@@ -160,7 +160,7 @@ TEST_CASE("create_month does not save an existing month without force")
     const auto requested_month = year{2026} / October;
 
     fake_book_repository repository;
-    std::ignore = repository.stored_book.create_budget(requested_month);
+    repository.stored_book.create_budget(requested_month);
     CHECK(repository.stored_book.contains_budget(requested_month));
 
     const auto result = budget::application::create_month(repository, {.year_month = requested_month});
@@ -176,7 +176,7 @@ TEST_CASE("create_month resets an existing month when force is set")
     const auto requested_month = year{2026} / October;
 
     fake_book_repository repository;
-    std::ignore = repository.stored_book.create_budget(requested_month);
+    repository.stored_book.create_budget(requested_month);
 
     const auto result = budget::application::create_month(repository, {.year_month = requested_month, .force = true});
 

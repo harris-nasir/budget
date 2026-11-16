@@ -56,7 +56,7 @@ inline auto create_month(budget::application::book_repository &repository, const
         return std::unexpected{create_month_error::already_exists};
     }
 
-    std::ignore = book.create_budget(year_month);
+    book.create_budget(year_month);
     repository.save(book);
     return create_month_result::created;
 }

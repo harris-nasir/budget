@@ -1,6 +1,9 @@
 module;
 
+#include <algorithm>
 #include <chrono>
+#include <expected>
+
 #include <optional>
 #include <string>
 #include <string_view>
@@ -20,26 +23,28 @@ class month
     }
 
     [[nodiscard]]
-    budget::types::category_id create_category(std::string_view name, budget::types::amount allocated = 0)
+    auto create_category(std::string_view name, budget::types::amount allocated = 0)
+        -> std::expected<budget::types::category_id, budget::types::category_error>
     {
+        if (std::ranges::any_of(categories_, [name](const auto &category) { return category.name == name; }))
+        {
+            return std::unexpected{budget::types::category_error::duplicate_name};
+        }
+
         const auto new_category_id = category_id_ + 1;
 
-        const auto category = budget::types::category{
+        categories_.push_back(budget::types::category{
             .id = new_category_id,
             .period_id = period_.id,
             .name = std::string{name},
-        };
-
-        const auto category_budget = budget::types::category_budget{
-            .category_id = new_category_id,
-            .period_id = period_.id,
-            .allocated = allocated,
-        };
-
-        categories_.push_back(category);
+        });
         try
         {
-            category_budgets_.push_back(category_budget);
+            category_budgets_.push_back(budget::types::category_budget{
+                .category_id = new_category_id,
+                .period_id = period_.id,
+                .allocated = allocated,
+            });
         }
         catch (...)
         {
@@ -49,6 +54,62 @@ class month
 
         category_id_ = new_category_id;
         return category_id_;
+    }
+
+
+    [[nodiscard]]
+    auto remove_category(budget::types::category_id category_id, bool force = false)
+        -> std::expected<void, budget::types::category_error>
+    {
+        const auto category = std::ranges::find(categories_, category_id, &budget::types::category::id);
+        if (category == categories_.end())
+        {
+            return std::unexpected{budget::types::category_error::not_found};
+        }
+
+        const auto has_items = std::ranges::any_of(
+            items_, [category_id](const auto &item) { return item.category_id == category_id; });
+        const auto transaction_references_category = std::ranges::any_of(transactions_, [this, category_id](const auto &transaction) {
+            return (transaction.category_id && *transaction.category_id == category_id) ||
+                   (transaction.item_id && std::ranges::any_of(items_, [&transaction, category_id](const auto &item) {
+                        return item.category_id == category_id && item.id == *transaction.item_id;
+                    }));
+        });
+
+        if ((has_items || transaction_references_category) && !force)
+        {
+            return std::unexpected{budget::types::category_error::in_use};
+        }
+
+        if (force)
+        {
+            std::ranges::for_each(transactions_, [this, category_id](auto &transaction) {
+                if (transaction.category_id && *transaction.category_id == category_id)
+                {
+                    transaction.category_id.reset();
+                }
+                if (transaction.item_id && std::ranges::any_of(items_, [&transaction, category_id](const auto &item) {
+                        return item.category_id == category_id && item.id == *transaction.item_id;
+                    }))
+                {
+                    transaction.item_id.reset();
+                }
+            });
+
+            const auto removed_items = std::ranges::remove_if(
+                items_, [category_id](const auto &item) { return item.category_id == category_id; });
+            items_.erase(removed_items.begin(), removed_items.end());
+        }
+
+
+        const auto removed_budgets = std::ranges::remove_if(
+            category_budgets_, [category_id](const auto &budget) { return budget.category_id == category_id; });
+        category_budgets_.erase(removed_budgets.begin(), removed_budgets.end());
+
+        const auto removed_categories =
+            std::ranges::remove_if(categories_, [category_id](const auto &entry) { return entry.id == category_id; });
+        categories_.erase(removed_categories.begin(), removed_categories.end());
+        return {};
     }
 
     [[nodiscard]]
@@ -72,14 +133,10 @@ class month
 
     budget::types::transaction_id create_transaction(
         std::string_view description, budget::types::transaction_type type, budget::types::amount amount,
-        std::optional<budget::types::category_id> category_id = std::nullopt,
+        budget::types::date timestamp, std::optional<budget::types::category_id> category_id = std::nullopt,
         std::optional<budget::types::item_id> item_id = std::nullopt)
     {
         const auto new_transaction_id = transaction_id_ + 1;
-
-        using namespace std::chrono;
-        const auto local = current_zone()->to_local(system_clock::now());
-        const year_month_day today{std::chrono::floor<std::chrono::days>(local)};
 
         auto transaction = budget::types::transaction{
             .id = new_transaction_id,
@@ -88,7 +145,7 @@ class month
             .type = type,
             .description = std::string{description},
             .amount = amount,
-            .timestamp = period_.year_month / today.day(),
+            .timestamp = timestamp,
         };
 
         transactions_.push_back(transaction);
@@ -108,6 +165,7 @@ class month
     {
         return categories_;
     }
+
 
     [[nodiscard]]
     std::vector<budget::types::category_budget> category_budgets() const

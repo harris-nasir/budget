@@ -36,7 +36,7 @@ TEST_CASE("create_month creates and saves a requested month")
 
     const auto result = budget::application::create_month(repository, {.year_month = requested_month});
 
-    CHECK(result == budget::application::create_month_result::created);
+    CHECK(result == budget::application::create_month_response::created);
     CHECK(repository.stored_book.contains_budget(requested_month));
     CHECK(repository.save_count == 1);
 }
@@ -52,7 +52,7 @@ TEST_CASE("create_month does not save an existing month without force")
 
     const auto result = budget::application::create_month(repository, {.year_month = requested_month});
 
-    CHECK(result == budget::application::create_month_result::already_exists);
+    CHECK(result == budget::application::create_month_response::already_exists);
     CHECK(repository.save_count == 0);
 }
 
@@ -66,7 +66,7 @@ TEST_CASE("create_month resets an existing month when force is set")
 
     const auto result = budget::application::create_month(repository, {.year_month = requested_month, .force = true});
 
-    CHECK(result == budget::application::create_month_result::reset);
+    CHECK(result == budget::application::create_month_response::reset);
     CHECK(repository.stored_book.contains_budget(requested_month));
     CHECK(repository.save_count == 1);
 }
@@ -77,6 +77,6 @@ TEST_CASE("create_month rejects a missing month")
 
     const auto result = budget::application::create_month(repository, {});
 
-    CHECK(result == budget::application::create_month_result::missing_month);
+    CHECK(result == budget::application::create_month_response::missing_month);
     CHECK(repository.save_count == 0);
 }

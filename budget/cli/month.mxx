@@ -87,20 +87,20 @@ void add_month_commands(CLI::App &app, month_options &command_options, budget::a
 
         switch (result)
         {
-        case budget::application::create_month_result::created: {
+        case budget::application::create_month_response::created: {
             std::cout << "Created budget month " << formatted_month << ".\n";
             break;
         }
-        case budget::application::create_month_result::reset: {
+        case budget::application::create_month_response::reset: {
             std::cout << "Reset budget month " << formatted_month << ".\n";
             break;
         }
-        case budget::application::create_month_result::already_exists: {
+        case budget::application::create_month_response::already_exists: {
             std::cerr << "Budget month " << formatted_month << " already exists. Use --force to reset it.\n";
             command_options.exit_code = 1;
             break;
         }
-        case budget::application::create_month_result::missing_month: {
+        case budget::application::create_month_response::missing_month: {
             std::cerr << "A month must be provided.\n";
             command_options.exit_code = 2;
             break;

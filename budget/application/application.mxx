@@ -7,6 +7,6 @@ export namespace budget::application
 {
 using ::budget::application::month::create_month;
 using ::budget::application::month::create_month_request;
-using ::budget::application::month::create_month_result;
+using ::budget::application::month::create_month_response;
 
 } // namespace budget::application

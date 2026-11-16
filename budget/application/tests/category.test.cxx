@@ -11,10 +11,12 @@ namespace
 struct fake_book_repository final : budget::application::book_repository
 {
     budget::core::book stored_book;
+    int load_count{};
     int save_count{};
 
     auto load() -> budget::core::book override
     {
+        ++load_count;
         return stored_book;
     }
 
@@ -41,14 +43,13 @@ TEST_CASE("create_category creates a category in the requested month")
     CHECK(repository.save_count == 1);
 
     const auto categories = budget::application::list_categories(repository, {.year_month = requested_month});
-    const auto budgets = budget::application::list_category_budgets(repository, {.year_month = requested_month});
     REQUIRE(categories.has_value());
-    REQUIRE(budgets.has_value());
-    REQUIRE(categories->size() == 1);
-    REQUIRE(budgets->size() == 1);
-    CHECK((*categories)[0].name == "Housing");
-    CHECK((*budgets)[0].category_id == *response);
-    CHECK((*budgets)[0].allocated == 1200);
+    REQUIRE(categories->categories.size() == 1);
+    REQUIRE(categories->budgets.size() == 1);
+    CHECK(categories->categories[0].name == "Housing");
+    CHECK(categories->budgets[0].category_id == *response);
+    CHECK(categories->budgets[0].allocated == 1200);
+    CHECK(repository.load_count == 2);
 }
 
 TEST_CASE("create_category rejects duplicate names in the same month")
@@ -100,15 +101,12 @@ TEST_CASE("list_categories distinguishes an empty month from a missing month")
     const auto empty_month = budget::application::list_categories(repository, {.year_month = requested_month});
     const auto missing_month = budget::application::list_categories(
         repository, {.year_month = year{2026} / November});
-    const auto missing_month_budgets = budget::application::list_category_budgets(
-        repository, {.year_month = year{2026} / November});
 
     REQUIRE(empty_month.has_value());
-    CHECK(empty_month->empty());
+    CHECK(empty_month->categories.empty());
+    CHECK(empty_month->budgets.empty());
     REQUIRE(!missing_month.has_value());
     CHECK(missing_month.error() == budget::application::create_category_error::month_not_found);
-    REQUIRE(!missing_month_budgets.has_value());
-    CHECK(missing_month_budgets.error() == budget::application::create_category_error::month_not_found);
     CHECK(repository.save_count == 0);
 }
 
@@ -128,9 +126,7 @@ TEST_CASE("remove_category removes a category and saves the book")
     REQUIRE(remove_response.has_value());
     CHECK(repository.save_count == 2);
     const auto categories = budget::application::list_categories(repository, {.year_month = requested_month});
-    const auto budgets = budget::application::list_category_budgets(repository, {.year_month = requested_month});
     REQUIRE(categories.has_value());
-    REQUIRE(budgets.has_value());
-    CHECK(categories->empty());
-    CHECK(budgets->empty());
+    CHECK(categories->categories.empty());
+    CHECK(categories->budgets.empty());
 }

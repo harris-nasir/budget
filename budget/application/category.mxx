@@ -3,6 +3,7 @@ module;
 #include <chrono>
 #include <expected>
 #include <string>
+#include <utility>
 #include <vector>
 
 export module budget.application:category;
@@ -41,21 +42,34 @@ struct list_categories_request
     std::chrono::year_month year_month;
 };
 
-using list_categories_response = std::expected<std::vector<budget::core::category>, create_category_error>;
-using list_category_budgets_response = std::expected<std::vector<budget::core::category_budget>, create_category_error>;
+struct category_listing
+{
+    std::vector<budget::core::category> categories;
+    std::vector<budget::core::category_budget> budgets;
+};
+
+using list_categories_response = std::expected<category_listing, create_category_error>;
 
 inline auto list_categories(budget::application::book_repository &repository, const list_categories_request &request)
     -> list_categories_response
 {
     const auto book = repository.load();
-    return book.list_categories(request.year_month);
-}
+    const auto categories = book.list_categories(request.year_month);
+    if (!categories)
+    {
+        return std::unexpected{categories.error()};
+    }
 
-inline auto list_category_budgets(budget::application::book_repository &repository,
-                                  const list_categories_request &request) -> list_category_budgets_response
-{
-    const auto book = repository.load();
-    return book.list_category_budgets(request.year_month);
+    const auto budgets = book.list_category_budgets(request.year_month);
+    if (!budgets)
+    {
+        return std::unexpected{budgets.error()};
+    }
+
+    return category_listing{
+        .categories = std::move(*categories),
+        .budgets = std::move(*budgets),
+    };
 }
 
 struct remove_category_request

@@ -4,7 +4,9 @@ module;
 #include <charconv>
 #include <chrono>
 #include <iostream>
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include <CLI/CLI.hpp>
 
@@ -12,13 +14,56 @@ export module budget.cli:month;
 
 import budget.application;
 
+namespace
+{
+auto parse_month(std::string_view date) -> std::optional<std::chrono::year_month>
+{
+    using namespace std::chrono;
+
+    if (date.size() != 7 || date[4] != '-')
+    {
+        return std::nullopt;
+    }
+
+    int year_value{};
+    unsigned month_value{};
+    const auto year_parse = std::from_chars(date.data(), date.data() + 4, year_value);
+    const auto month_parse = std::from_chars(date.data() + 5, date.data() + date.size(), month_value);
+    const auto is_digit = [](char value) { return value >= '0' && value <= '9'; };
+    const bool has_numeric_fields =
+        std::ranges::all_of(date.substr(0, 4), is_digit) && std::ranges::all_of(date.substr(5), is_digit);
+
+    if (!has_numeric_fields || year_parse.ec != std::errc{} || year_parse.ptr != date.data() + 4 ||
+        month_parse.ec != std::errc{} || month_parse.ptr != date.data() + date.size())
+    {
+        return std::nullopt;
+    }
+
+    const auto requested_month = year{year_value} / std::chrono::month{month_value};
+    if (!requested_month.ok())
+    {
+        return std::nullopt;
+    }
+
+    return requested_month;
+}
+
+auto format_month(std::chrono::year_month requested_month) -> std::string
+{
+    const auto month_number = static_cast<unsigned>(requested_month.month());
+    return std::to_string(static_cast<int>(requested_month.year())) + "-" + (month_number < 10 ? "0" : "") +
+           std::to_string(month_number);
+}
+} // namespace
+
 export namespace budget::cli::month
 {
 struct month_options
 {
     std::string new_date;
     bool force{};
-    std::string list_date;
+    std::string list_from;
+    std::string list_to;
     int exit_code{};
 };
 
@@ -31,7 +76,8 @@ void add_month_commands(CLI::App &app, month_options &command_options, budget::a
     new_command->add_flag("--force", command_options.force, "Reset the month if it already exists");
 
     auto *list_command = month_command->add_subcommand("list", "List budget months");
-    list_command->add_option("date", command_options.list_date, "Month in YYYY-MM format");
+    list_command->add_option("--from", command_options.list_from, "First month to include in YYYY-MM format");
+    list_command->add_option("--to", command_options.list_to, "Last month to include in YYYY-MM format");
 
     new_command->callback([&command_options, &repository] {
         using namespace std::chrono;
@@ -45,67 +91,101 @@ void add_month_commands(CLI::App &app, month_options &command_options, budget::a
         }
         else
         {
-            const auto &date = command_options.new_date;
-            int year_value{};
-            unsigned month_value{};
-            if (date.size() != 7 || date[4] != '-')
+            const auto parsed_month = parse_month(command_options.new_date);
+            if (!parsed_month)
             {
-                std::cerr << "Invalid month '" << date << "'. Expected YYYY-MM.\n";
+                std::cerr << "Invalid month '" << command_options.new_date << "'. Expected a valid YYYY-MM month.\n";
                 command_options.exit_code = 2;
                 return;
             }
 
-            const auto year_parse = std::from_chars(date.data(), date.data() + 4, year_value);
-            const auto month_parse = std::from_chars(date.data() + 5, date.data() + date.size(), month_value);
-            const auto is_digit = [](char value) { return value >= '0' && value <= '9'; };
-            const bool has_numeric_fields = std::all_of(date.begin(), date.begin() + 4, is_digit) &&
-                                            std::all_of(date.begin() + 5, date.end(), is_digit);
-
-            if (!has_numeric_fields || year_parse.ec != std::errc{} || year_parse.ptr != date.data() + 4 ||
-                month_parse.ec != std::errc{} || month_parse.ptr != date.data() + date.size())
-            {
-                std::cerr << "Invalid month '" << date << "'. Expected YYYY-MM.\n";
-                command_options.exit_code = 2;
-                return;
-            }
-
-            requested_month = std::chrono::year{year_value} / std::chrono::month{month_value};
-            if (!requested_month.ok())
-            {
-                std::cerr << "Invalid month '" << date << "'. Expected a valid YYYY-MM month.\n";
-                command_options.exit_code = 2;
-                return;
-            }
+            requested_month = *parsed_month;
         }
 
         const auto result = budget::application::create_month(
             repository, {.year_month = requested_month, .force = command_options.force});
 
-        const auto month_number = static_cast<unsigned>(requested_month.month());
-        const auto formatted_month = std::to_string(static_cast<int>(requested_month.year())) + "-" +
-                                     (month_number < 10 ? "0" : "") + std::to_string(month_number);
+        const auto formatted_month = format_month(requested_month);
 
-        switch (result)
+        if (!result)
         {
-        case budget::application::create_month_response::created: {
+            switch (result.error())
+            {
+            case budget::application::create_month_error::already_exists: {
+                std::cerr << "Budget month " << formatted_month << " already exists. Use --force to reset it.\n";
+                command_options.exit_code = 1;
+                return;
+            }
+            case budget::application::create_month_error::missing_month: {
+                std::cerr << "A month must be provided.\n";
+                command_options.exit_code = 2;
+                return;
+            }
+            }
+        }
+
+        switch (*result)
+        {
+        case budget::application::create_month_result::created: {
             std::cout << "Created budget month " << formatted_month << ".\n";
             break;
         }
-        case budget::application::create_month_response::reset: {
+        case budget::application::create_month_result::reset: {
             std::cout << "Reset budget month " << formatted_month << ".\n";
             break;
         }
-        case budget::application::create_month_response::already_exists: {
-            std::cerr << "Budget month " << formatted_month << " already exists. Use --force to reset it.\n";
-            command_options.exit_code = 1;
-            break;
         }
-        case budget::application::create_month_response::missing_month: {
-            std::cerr << "A month must be provided.\n";
-            command_options.exit_code = 2;
-            break;
+    });
+
+    list_command->callback([&command_options, &repository] {
+        using namespace std::chrono;
+
+        std::optional<year_month> from;
+        if (!command_options.list_from.empty())
+        {
+            from = parse_month(command_options.list_from);
+            if (!from)
+            {
+                std::cerr << "Invalid month '" << command_options.list_from << "'. Expected a valid YYYY-MM month.\n";
+                command_options.exit_code = 2;
+                return;
+            }
         }
+
+        std::optional<year_month> to;
+        if (!command_options.list_to.empty())
+        {
+            to = parse_month(command_options.list_to);
+            if (!to)
+            {
+                std::cerr << "Invalid month '" << command_options.list_to << "'. Expected a valid YYYY-MM month.\n";
+                command_options.exit_code = 2;
+                return;
+            }
         }
+
+        const auto response = budget::application::list_months(repository, {.from = from, .to = to});
+        if (!response)
+        {
+            switch (response.error())
+            {
+            case budget::application::list_months_error::from_after_to: {
+                std::cerr << "The --from month must not be after the --to month.\n";
+                command_options.exit_code = 2;
+                return;
+            }
+            }
+        }
+
+        const auto &months = *response;
+        if (months.empty())
+        {
+            std::cout << "No budget months found.\n";
+            return;
+        }
+
+        std::ranges::for_each(months,
+                              [](const auto &month) { std::cout << format_month(month.period().year_month) << '\n'; });
     });
 }
 } // namespace budget::cli::month

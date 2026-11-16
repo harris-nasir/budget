@@ -20,20 +20,26 @@ struct create_month_request
     bool force{};
 };
 
-enum class create_month_response
+enum class create_month_result
 {
     created,
     reset,
+};
+
+enum class create_month_error
+{
     already_exists,
     missing_month,
 };
+
+using create_month_response = std::expected<create_month_result, create_month_error>;
 
 inline auto create_month(budget::application::book_repository &repository, const create_month_request &request)
     -> create_month_response
 {
     if (!request.year_month)
     {
-        return create_month_response::missing_month;
+        return std::unexpected{create_month_error::missing_month};
     }
 
     auto book = repository.load();
@@ -42,17 +48,17 @@ inline auto create_month(budget::application::book_repository &repository, const
     if (request.force && book.reset_budget(year_month))
     {
         repository.save(book);
-        return create_month_response::reset;
+        return create_month_result::reset;
     }
 
     if (book.contains_budget(year_month))
     {
-        return create_month_response::already_exists;
+        return std::unexpected{create_month_error::already_exists};
     }
 
     std::ignore = book.create_budget(year_month);
     repository.save(book);
-    return create_month_response::created;
+    return create_month_result::created;
 }
 
 struct list_months_request

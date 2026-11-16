@@ -1,8 +1,11 @@
 module;
 
+#include <algorithm>
 #include <chrono>
+#include <expected>
 #include <optional>
 #include <tuple>
+#include <vector>
 
 export module budget.application:month;
 
@@ -50,5 +53,41 @@ inline auto create_month(budget::application::book_repository &repository, const
     std::ignore = book.create_budget(year_month);
     repository.save(book);
     return create_month_response::created;
+}
+
+struct list_months_request
+{
+    std::optional<std::chrono::year_month> from;
+    std::optional<std::chrono::year_month> to;
+};
+
+enum class list_months_error
+{
+    from_after_to,
+};
+
+using list_months_response = std::expected<std::vector<budget::core::month>, list_months_error>;
+
+inline auto list_months(budget::application::book_repository &repository, const list_months_request &request = {})
+    -> list_months_response
+{
+    if (request.from && request.to && *request.from > *request.to)
+    {
+        return std::unexpected{list_months_error::from_after_to};
+    }
+
+    const auto book = repository.load();
+    auto months = book.months();
+
+    if (request.from || request.to)
+    {
+        const auto excluded_months = std::ranges::remove_if(months, [&request](const auto &month) {
+            const auto year_month = month.period().year_month;
+            return (request.from && year_month < *request.from) || (request.to && year_month > *request.to);
+        });
+        months.erase(excluded_months.begin(), excluded_months.end());
+    }
+
+    return months;
 }
 } // namespace budget::application::month

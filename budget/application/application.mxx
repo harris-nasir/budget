@@ -8,5 +8,9 @@ export namespace budget::application
 using ::budget::application::month::create_month;
 using ::budget::application::month::create_month_request;
 using ::budget::application::month::create_month_response;
+using ::budget::application::month::list_months;
+using ::budget::application::month::list_months_error;
+using ::budget::application::month::list_months_request;
+using ::budget::application::month::list_months_response;
 
 } // namespace budget::application

@@ -1,7 +1,7 @@
 module;
 
 #include <algorithm>
-#include <chrono>
+#include <cctype>
 #include <expected>
 
 #include <optional>
@@ -26,6 +26,11 @@ class month
     auto create_category(std::string_view name, budget::types::amount allocated = 0)
         -> std::expected<budget::types::category_id, budget::types::category_error>
     {
+        if (std::ranges::all_of(name, [](const unsigned char character) { return std::isspace(character) != 0; }))
+        {
+            return std::unexpected{budget::types::category_error::invalid_name};
+        }
+
         if (std::ranges::any_of(categories_, [name](const auto &category) { return category.name == name; }))
         {
             return std::unexpected{budget::types::category_error::duplicate_name};
@@ -56,7 +61,6 @@ class month
         return category_id_;
     }
 
-
     [[nodiscard]]
     auto remove_category(budget::types::category_id category_id, bool force = false)
         -> std::expected<void, budget::types::category_error>
@@ -67,9 +71,10 @@ class month
             return std::unexpected{budget::types::category_error::not_found};
         }
 
-        const auto has_items = std::ranges::any_of(
-            items_, [category_id](const auto &item) { return item.category_id == category_id; });
-        const auto transaction_references_category = std::ranges::any_of(transactions_, [this, category_id](const auto &transaction) {
+        const auto has_items =
+            std::ranges::any_of(items_, [category_id](const auto &item) { return item.category_id == category_id; });
+        const auto transaction_references_category = std::ranges::any_of(transactions_, [this, category_id](
+                                                                                            const auto &transaction) {
             return (transaction.category_id && *transaction.category_id == category_id) ||
                    (transaction.item_id && std::ranges::any_of(items_, [&transaction, category_id](const auto &item) {
                         return item.category_id == category_id && item.id == *transaction.item_id;
@@ -100,7 +105,6 @@ class month
                 items_, [category_id](const auto &item) { return item.category_id == category_id; });
             items_.erase(removed_items.begin(), removed_items.end());
         }
-
 
         const auto removed_budgets = std::ranges::remove_if(
             category_budgets_, [category_id](const auto &budget) { return budget.category_id == category_id; });
@@ -165,7 +169,6 @@ class month
     {
         return categories_;
     }
-
 
     [[nodiscard]]
     std::vector<budget::types::category_budget> category_budgets() const

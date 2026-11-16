@@ -47,6 +47,21 @@ TEST_CASE("month creates categories with budgets")
     CHECK(budgets[0].allocated == 1200);
 }
 
+TEST_CASE("month rejects empty and whitespace-only category names")
+{
+    budget::core::month month{test_period()};
+
+    const auto empty_result = month.create_category("");
+    const auto whitespace_result = month.create_category(" \t\r\n");
+
+    REQUIRE(!empty_result.has_value());
+    CHECK(empty_result.error() == budget::core::category_error::invalid_name);
+    REQUIRE(!whitespace_result.has_value());
+    CHECK(whitespace_result.error() == budget::core::category_error::invalid_name);
+    CHECK(month.categories().empty());
+    CHECK(month.category_budgets().empty());
+}
+
 TEST_CASE("month rejects duplicate category names")
 {
     budget::core::month month{test_period()};

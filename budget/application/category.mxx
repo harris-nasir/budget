@@ -1,0 +1,83 @@
+module;
+
+#include <chrono>
+#include <expected>
+#include <string>
+#include <vector>
+
+export module budget.application:category;
+
+import budget.application.repository;
+import budget.core;
+
+export namespace budget::application::category
+{
+struct create_category_request
+{
+    std::chrono::year_month year_month;
+    std::string name;
+    budget::core::amount allocated{};
+};
+
+using create_category_error = budget::core::category_error;
+using create_category_response = std::expected<budget::core::category_id, create_category_error>;
+
+inline auto create_category(budget::application::book_repository &repository, const create_category_request &request)
+    -> create_category_response
+{
+    auto book = repository.load();
+    const auto result = book.create_category(request.year_month, request.name, request.allocated);
+    if (!result)
+    {
+        return std::unexpected{result.error()};
+    }
+
+    repository.save(book);
+    return *result;
+}
+
+struct list_categories_request
+{
+    std::chrono::year_month year_month;
+};
+
+using list_categories_response = std::expected<std::vector<budget::core::category>, create_category_error>;
+using list_category_budgets_response = std::expected<std::vector<budget::core::category_budget>, create_category_error>;
+
+inline auto list_categories(budget::application::book_repository &repository, const list_categories_request &request)
+    -> list_categories_response
+{
+    const auto book = repository.load();
+    return book.list_categories(request.year_month);
+}
+
+inline auto list_category_budgets(budget::application::book_repository &repository,
+                                  const list_categories_request &request) -> list_category_budgets_response
+{
+    const auto book = repository.load();
+    return book.list_category_budgets(request.year_month);
+}
+
+struct remove_category_request
+{
+    std::chrono::year_month year_month;
+    budget::core::category_id category_id;
+    bool force{};
+};
+
+using remove_category_response = std::expected<void, create_category_error>;
+
+inline auto remove_category(budget::application::book_repository &repository, const remove_category_request &request)
+    -> remove_category_response
+{
+    auto book = repository.load();
+    const auto result = book.remove_category(request.year_month, request.category_id, request.force);
+    if (!result)
+    {
+        return std::unexpected{result.error()};
+    }
+
+    repository.save(book);
+    return {};
+}
+} // namespace budget::application::category

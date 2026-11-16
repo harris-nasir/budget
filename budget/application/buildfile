@@ -1,12 +1,15 @@
 import doctest = doctest%lib{doctest}
 
-dir{.}: lib{budget-application}: {mxx}{application month repository} ../core/lib{budget-core}
+dir{.}: lib{budget-application}: {mxx}{application category month repository} ../core/lib{budget-core}
 {
   bin.binless = true
   install = false
 }
 
 dir{.}: exe{tests/month.test...}: cxx{tests/month.test...} lib{budget-application} ../core/lib{budget-core} $doctest
+dir{.}: exe{tests/category.test...}: cxx{tests/category.test...} lib{budget-application} ../core/lib{budget-core} $doctest
+
+exe{tests/month.test... tests/category.test...}:
 {
   test = true
   install = false

@@ -1,6 +1,7 @@
 export module budget.application;
 
 export import budget.application.repository;
+import :category;
 import :month;
 
 export namespace budget::application
@@ -14,5 +15,17 @@ using ::budget::application::month::list_months;
 using ::budget::application::month::list_months_error;
 using ::budget::application::month::list_months_request;
 using ::budget::application::month::list_months_response;
+using ::budget::application::category::create_category;
+using ::budget::application::category::create_category_error;
+using ::budget::application::category::create_category_request;
+using ::budget::application::category::create_category_response;
+using ::budget::application::category::list_categories;
+using ::budget::application::category::list_categories_request;
+using ::budget::application::category::list_categories_response;
+using ::budget::application::category::list_category_budgets;
+using ::budget::application::category::list_category_budgets_response;
+using ::budget::application::category::remove_category;
+using ::budget::application::category::remove_category_request;
+using ::budget::application::category::remove_category_response;
 
 } // namespace budget::application

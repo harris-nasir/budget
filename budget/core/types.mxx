@@ -24,6 +24,15 @@ enum class category_error
     in_use,
 };
 
+enum class item_error
+{
+    month_not_found,
+    category_not_found,
+    invalid_name,
+    duplicate_name,
+    not_found,
+    in_use,
+};
 
 enum class transaction_type : std::uint8_t
 {
@@ -54,7 +63,7 @@ struct category_budget
 struct item
 {
     item_id id;
-    category_id category_id;
+    std::optional<category_id> category_id;
     std::string name;
     amount expected;
 };

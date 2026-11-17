@@ -15,6 +15,7 @@ using ::budget::types::category_error;
 using ::budget::types::category_id;
 using ::budget::types::date;
 using ::budget::types::item;
+using ::budget::types::item_error;
 using ::budget::types::item_id;
 using ::budget::types::period;
 using ::budget::types::period_id;

@@ -3,7 +3,7 @@ module;
 #include <algorithm>
 #include <cctype>
 #include <expected>
-
+#include <iterator>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -71,13 +71,14 @@ class month
             return std::unexpected{budget::types::category_error::not_found};
         }
 
-        const auto has_items =
-            std::ranges::any_of(items_, [category_id](const auto &item) { return item.category_id == category_id; });
+        const auto has_items = std::ranges::any_of(
+            items_, [category_id](const auto &item) { return item.category_id && *item.category_id == category_id; });
+
         const auto transaction_references_category = std::ranges::any_of(transactions_, [this, category_id](
                                                                                             const auto &transaction) {
             return (transaction.category_id && *transaction.category_id == category_id) ||
                    (transaction.item_id && std::ranges::any_of(items_, [&transaction, category_id](const auto &item) {
-                        return item.category_id == category_id && item.id == *transaction.item_id;
+                        return item.category_id && *item.category_id == category_id && item.id == *transaction.item_id;
                     }));
         });
 
@@ -94,7 +95,7 @@ class month
                     transaction.category_id.reset();
                 }
                 if (transaction.item_id && std::ranges::any_of(items_, [&transaction, category_id](const auto &item) {
-                        return item.category_id == category_id && item.id == *transaction.item_id;
+                        return item.category_id && *item.category_id == category_id && item.id == *transaction.item_id;
                     }))
                 {
                     transaction.item_id.reset();
@@ -117,22 +118,67 @@ class month
     }
 
     [[nodiscard]]
-    budget::types::item_id create_item(std::string_view name, budget::types::category_id category_id,
-                                       budget::types::amount amount)
+    auto create_item(std::string_view name, std::optional<budget::types::category_id> category_id,
+                     budget::types::amount expected) -> std::expected<budget::types::item_id, budget::types::item_error>
     {
-        const auto new_item_id = item_id_ + 1;
+        if (std::ranges::all_of(name, [](const unsigned char character) { return std::isspace(character) != 0; }))
+        {
+            return std::unexpected{budget::types::item_error::invalid_name};
+        }
 
-        const auto item = budget::types::item{
+        if (category_id && !std::ranges::contains(categories_, *category_id, &budget::types::category::id))
+        {
+            return std::unexpected{budget::types::item_error::category_not_found};
+        }
+
+        if (std::ranges::any_of(items_, [name, category_id](const auto &item) {
+                return item.name == name && item.category_id == category_id;
+            }))
+        {
+            return std::unexpected{budget::types::item_error::duplicate_name};
+        }
+
+        const auto new_item_id = item_id_ + 1;
+        items_.push_back(budget::types::item{
             .id = new_item_id,
             .category_id = category_id,
             .name = std::string{name},
-            .expected = amount,
-        };
-
-        items_.push_back(item);
-
+            .expected = expected,
+        });
         item_id_ = new_item_id;
         return item_id_;
+    }
+
+    [[nodiscard]]
+    auto remove_item(budget::types::item_id item_id, bool force = false)
+        -> std::expected<void, budget::types::item_error>
+    {
+        const auto item = std::ranges::find(items_, item_id, &budget::types::item::id);
+        if (item == items_.end())
+        {
+            return std::unexpected{budget::types::item_error::not_found};
+        }
+
+        const auto has_transactions = std::ranges::any_of(transactions_, [item_id](const auto &transaction) {
+            return transaction.item_id && *transaction.item_id == item_id;
+        });
+        if (has_transactions && !force)
+        {
+            return std::unexpected{budget::types::item_error::in_use};
+        }
+
+        if (force)
+        {
+            std::ranges::for_each(transactions_, [item_id](auto &transaction) {
+                if (transaction.item_id && *transaction.item_id == item_id)
+                {
+                    transaction.item_id.reset();
+                }
+            });
+        }
+
+        items_.erase(item);
+        return {};
     }
 
     budget::types::transaction_id create_transaction(
@@ -177,9 +223,18 @@ class month
     }
 
     [[nodiscard]]
-    std::vector<budget::types::item> items() const
+    auto items(std::optional<budget::types::category_id> category_id = std::nullopt) const
+        -> std::vector<budget::types::item>
     {
-        return items_;
+        if (!category_id)
+        {
+            return items_;
+        }
+
+        std::vector<budget::types::item> filtered_items;
+        std::ranges::copy_if(items_, std::back_inserter(filtered_items),
+                             [category_id](const auto &item) { return item.category_id == category_id; });
+        return filtered_items;
     }
 
     [[nodiscard]]

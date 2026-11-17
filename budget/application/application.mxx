@@ -21,9 +21,11 @@ using ::budget::application::category::create_category_request;
 using ::budget::application::category::create_category_response;
 using ::budget::application::category::category_listing;
 using ::budget::application::category::list_categories;
+using ::budget::application::category::list_categories_error;
 using ::budget::application::category::list_categories_request;
 using ::budget::application::category::list_categories_response;
 using ::budget::application::category::remove_category;
+using ::budget::application::category::remove_category_error;
 using ::budget::application::category::remove_category_request;
 using ::budget::application::category::remove_category_response;
 

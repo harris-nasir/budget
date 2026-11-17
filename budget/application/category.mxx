@@ -20,21 +20,37 @@ struct create_category_request
     budget::core::amount allocated{};
 };
 
-using create_category_error = budget::core::category_error;
+enum class create_category_error
+{
+    month_not_found,
+    invalid_name,
+    duplicate_name,
+};
+
 using create_category_response = std::expected<budget::core::category_id, create_category_error>;
 
 inline auto create_category(budget::application::book_repository &repository, const create_category_request &request)
     -> create_category_response
 {
     auto book = repository.load();
-    const auto result = book.create_category(request.year_month, request.name, request.allocated);
-    if (!result)
+    const auto result = book.create_category(request.year_month, request.name, request.allocated)
+                            .transform_error([](budget::core::book::create_category_error error) {
+                                switch (error)
+                                {
+                                case budget::core::book::create_category_error::month_not_found:
+                                    return create_category_error::month_not_found;
+                                case budget::core::book::create_category_error::invalid_name:
+                                    return create_category_error::invalid_name;
+                                case budget::core::book::create_category_error::duplicate_name:
+                                    return create_category_error::duplicate_name;
+                                }
+                                std::unreachable();
+                            });
+    if (result)
     {
-        return std::unexpected{result.error()};
+        repository.save(book);
     }
-
-    repository.save(book);
-    return *result;
+    return result;
 }
 
 struct list_categories_request
@@ -46,29 +62,42 @@ struct category_listing
 {
     std::vector<budget::core::category> categories;
     std::vector<budget::core::category_budget> budgets;
+    std::vector<budget::core::item> items;
 };
 
-using list_categories_response = std::expected<category_listing, create_category_error>;
+enum class list_categories_error
+{
+    month_not_found,
+};
+
+using list_categories_response = std::expected<category_listing, list_categories_error>;
 
 inline auto list_categories(budget::application::book_repository &repository, const list_categories_request &request)
     -> list_categories_response
 {
     const auto book = repository.load();
-    const auto categories = book.list_categories(request.year_month);
+    auto categories = book.list_categories(request.year_month);
     if (!categories)
     {
-        return std::unexpected{categories.error()};
+        return std::unexpected{list_categories_error::month_not_found};
     }
 
-    const auto budgets = book.list_category_budgets(request.year_month);
+    auto budgets = book.list_category_budgets(request.year_month);
     if (!budgets)
     {
-        return std::unexpected{budgets.error()};
+        return std::unexpected{list_categories_error::month_not_found};
+    }
+
+    auto items = book.list_items(request.year_month);
+    if (!items)
+    {
+        return std::unexpected{list_categories_error::month_not_found};
     }
 
     return category_listing{
         .categories = std::move(*categories),
         .budgets = std::move(*budgets),
+        .items = std::move(*items),
     };
 }
 
@@ -79,19 +108,36 @@ struct remove_category_request
     bool force{};
 };
 
-using remove_category_response = std::expected<void, create_category_error>;
+enum class remove_category_error
+{
+    month_not_found,
+    not_found,
+    in_use,
+};
+
+using remove_category_response = std::expected<void, remove_category_error>;
 
 inline auto remove_category(budget::application::book_repository &repository, const remove_category_request &request)
     -> remove_category_response
 {
     auto book = repository.load();
-    const auto result = book.remove_category(request.year_month, request.category_id, request.force);
-    if (!result)
+    const auto result = book.remove_category(request.year_month, request.category_id, request.force)
+                            .transform_error([](budget::core::book::remove_category_error error) {
+                                switch (error)
+                                {
+                                case budget::core::book::remove_category_error::month_not_found:
+                                    return remove_category_error::month_not_found;
+                                case budget::core::book::remove_category_error::not_found:
+                                    return remove_category_error::not_found;
+                                case budget::core::book::remove_category_error::in_use:
+                                    return remove_category_error::in_use;
+                                }
+                                std::unreachable();
+                            });
+    if (result)
     {
-        return std::unexpected{result.error()};
+        repository.save(book);
     }
-
-    repository.save(book);
-    return {};
+    return result;
 }
 } // namespace budget::application::category

@@ -46,6 +46,7 @@ TEST_CASE("create_category creates a category in the requested month")
     REQUIRE(categories.has_value());
     REQUIRE(categories->categories.size() == 1);
     REQUIRE(categories->budgets.size() == 1);
+    CHECK(categories->items.empty());
     CHECK(categories->categories[0].name == "Housing");
     CHECK(categories->budgets[0].category_id == *response);
     CHECK(categories->budgets[0].allocated == 1200);
@@ -105,8 +106,9 @@ TEST_CASE("list_categories distinguishes an empty month from a missing month")
     REQUIRE(empty_month.has_value());
     CHECK(empty_month->categories.empty());
     CHECK(empty_month->budgets.empty());
+    CHECK(empty_month->items.empty());
     REQUIRE(!missing_month.has_value());
-    CHECK(missing_month.error() == budget::application::create_category_error::month_not_found);
+    CHECK(missing_month.error() == budget::application::list_categories_error::month_not_found);
     CHECK(repository.save_count == 0);
 }
 
@@ -129,4 +131,5 @@ TEST_CASE("remove_category removes a category and saves the book")
     REQUIRE(categories.has_value());
     CHECK(categories->categories.empty());
     CHECK(categories->budgets.empty());
+    CHECK(categories->items.empty());
 }

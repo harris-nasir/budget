@@ -91,10 +91,7 @@ void add_category_commands(CLI::App &app, category_options &command_options,
                           << budget::cli::month_value::format(*requested_month) << ".\n";
                 command_options.exit_code = 1;
                 return;
-            case budget::application::create_category_error::not_found:
-            case budget::application::create_category_error::in_use:
-                command_options.exit_code = 1;
-                return;
+
             }
         }
 
@@ -112,9 +109,15 @@ void add_category_commands(CLI::App &app, category_options &command_options,
         const auto result = budget::application::list_categories(repository, {.year_month = *requested_month});
         if (!result)
         {
-            std::cerr << "Budget month " << budget::cli::month_value::format(*requested_month) << " was not found.\n";
-            command_options.exit_code = 1;
-            return;
+            switch (result.error())
+            {
+            case budget::application::list_categories_error::month_not_found:
+                std::cerr << "Budget month " << budget::cli::month_value::format(*requested_month)
+                          << " was not found.\n";
+                command_options.exit_code = 1;
+                return;
+
+            }
         }
 
         const auto &categories = result->categories;
@@ -150,25 +153,22 @@ void add_category_commands(CLI::App &app, category_options &command_options,
         {
             switch (result.error())
             {
-            case budget::application::create_category_error::month_not_found:
+            case budget::application::remove_category_error::month_not_found:
                 std::cerr << "Budget month " << budget::cli::month_value::format(*requested_month)
                           << " was not found.\n";
                 command_options.exit_code = 1;
                 return;
-            case budget::application::create_category_error::not_found:
+            case budget::application::remove_category_error::not_found:
                 std::cerr << "Category " << command_options.id << " was not found in budget month "
                           << budget::cli::month_value::format(*requested_month) << ".\n";
                 command_options.exit_code = 1;
                 return;
-            case budget::application::create_category_error::in_use:
+            case budget::application::remove_category_error::in_use:
                 std::cerr << "Category " << command_options.id
                           << " is in use. Use --force to remove it and its items.\n";
                 command_options.exit_code = 1;
                 return;
-            case budget::application::create_category_error::invalid_name:
-            case budget::application::create_category_error::duplicate_name:
-                command_options.exit_code = 1;
-                return;
+
             }
         }
 

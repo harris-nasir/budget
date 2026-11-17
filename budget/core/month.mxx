@@ -18,22 +18,47 @@ export namespace budget
 class month
 {
   public:
+    enum class create_category_error
+    {
+        invalid_name,
+        duplicate_name,
+    };
+
+    enum class remove_category_error
+    {
+        not_found,
+        in_use,
+    };
+
+    enum class create_item_error
+    {
+        category_not_found,
+        invalid_name,
+        duplicate_name,
+    };
+
+    enum class remove_item_error
+    {
+        not_found,
+        in_use,
+    };
+
     explicit month(budget::types::period period) : period_(period)
     {
     }
 
     [[nodiscard]]
     auto create_category(std::string_view name, budget::types::amount allocated = 0)
-        -> std::expected<budget::types::category_id, budget::types::category_error>
+        -> std::expected<budget::types::category_id, create_category_error>
     {
         if (std::ranges::all_of(name, [](const unsigned char character) { return std::isspace(character) != 0; }))
         {
-            return std::unexpected{budget::types::category_error::invalid_name};
+            return std::unexpected{create_category_error::invalid_name};
         }
 
         if (std::ranges::any_of(categories_, [name](const auto &category) { return category.name == name; }))
         {
-            return std::unexpected{budget::types::category_error::duplicate_name};
+            return std::unexpected{create_category_error::duplicate_name};
         }
 
         const auto new_category_id = category_id_ + 1;
@@ -63,12 +88,12 @@ class month
 
     [[nodiscard]]
     auto remove_category(budget::types::category_id category_id, bool force = false)
-        -> std::expected<void, budget::types::category_error>
+        -> std::expected<void, remove_category_error>
     {
         const auto category = std::ranges::find(categories_, category_id, &budget::types::category::id);
         if (category == categories_.end())
         {
-            return std::unexpected{budget::types::category_error::not_found};
+            return std::unexpected{remove_category_error::not_found};
         }
 
         const auto has_items = std::ranges::any_of(
@@ -84,7 +109,7 @@ class month
 
         if ((has_items || transaction_references_category) && !force)
         {
-            return std::unexpected{budget::types::category_error::in_use};
+            return std::unexpected{remove_category_error::in_use};
         }
 
         if (force)
@@ -119,23 +144,23 @@ class month
 
     [[nodiscard]]
     auto create_item(std::string_view name, std::optional<budget::types::category_id> category_id,
-                     budget::types::amount expected) -> std::expected<budget::types::item_id, budget::types::item_error>
+                     budget::types::amount expected) -> std::expected<budget::types::item_id, create_item_error>
     {
         if (std::ranges::all_of(name, [](const unsigned char character) { return std::isspace(character) != 0; }))
         {
-            return std::unexpected{budget::types::item_error::invalid_name};
+            return std::unexpected{create_item_error::invalid_name};
         }
 
         if (category_id && !std::ranges::contains(categories_, *category_id, &budget::types::category::id))
         {
-            return std::unexpected{budget::types::item_error::category_not_found};
+            return std::unexpected{create_item_error::category_not_found};
         }
 
         if (std::ranges::any_of(items_, [name, category_id](const auto &item) {
                 return item.name == name && item.category_id == category_id;
             }))
         {
-            return std::unexpected{budget::types::item_error::duplicate_name};
+            return std::unexpected{create_item_error::duplicate_name};
         }
 
         const auto new_item_id = item_id_ + 1;
@@ -151,12 +176,12 @@ class month
 
     [[nodiscard]]
     auto remove_item(budget::types::item_id item_id, bool force = false)
-        -> std::expected<void, budget::types::item_error>
+        -> std::expected<void, remove_item_error>
     {
         const auto item = std::ranges::find(items_, item_id, &budget::types::item::id);
         if (item == items_.end())
         {
-            return std::unexpected{budget::types::item_error::not_found};
+            return std::unexpected{remove_item_error::not_found};
         }
 
         const auto has_transactions = std::ranges::any_of(transactions_, [item_id](const auto &transaction) {
@@ -164,7 +189,7 @@ class month
         });
         if (has_transactions && !force)
         {
-            return std::unexpected{budget::types::item_error::in_use};
+            return std::unexpected{remove_item_error::in_use};
         }
 
         if (force)

@@ -5,6 +5,7 @@ module;
 #include <expected>
 #include <optional>
 #include <string_view>
+#include <utility>
 
 export module budget.core:book;
 
@@ -16,6 +17,50 @@ export namespace budget
 class book
 {
   public:
+    enum class create_category_error
+    {
+        month_not_found,
+        invalid_name,
+        duplicate_name,
+    };
+
+    enum class list_categories_error
+    {
+        month_not_found,
+    };
+
+    enum class list_category_budgets_error
+    {
+        month_not_found,
+    };
+
+    enum class remove_category_error
+    {
+        month_not_found,
+        not_found,
+        in_use,
+    };
+
+    enum class create_item_error
+    {
+        month_not_found,
+        category_not_found,
+        invalid_name,
+        duplicate_name,
+    };
+
+    enum class list_items_error
+    {
+        month_not_found,
+    };
+
+    enum class remove_item_error
+    {
+        month_not_found,
+        not_found,
+        in_use,
+    };
+
     void create_budget(std::chrono::year_month year_month)
     {
         const auto new_period_id = period_id_ + 1;
@@ -28,27 +73,36 @@ class book
 
     [[nodiscard]]
     auto create_category(std::chrono::year_month year_month, std::string_view name, budget::types::amount allocated = 0)
-        -> std::expected<budget::types::category_id, budget::types::category_error>
+        -> std::expected<budget::types::category_id, create_category_error>
     {
         const auto month = std::ranges::find_if(
             months_, [year_month](const auto &month) { return month.period().year_month == year_month; });
         if (month == months_.end())
         {
-            return std::unexpected{budget::types::category_error::month_not_found};
+            return std::unexpected{create_category_error::month_not_found};
         }
 
-        return month->create_category(name, allocated);
+        return month->create_category(name, allocated).transform_error([](budget::month::create_category_error error) {
+            switch (error)
+            {
+            case budget::month::create_category_error::invalid_name:
+                return create_category_error::invalid_name;
+            case budget::month::create_category_error::duplicate_name:
+                return create_category_error::duplicate_name;
+            }
+            std::unreachable();
+        });
     }
 
     [[nodiscard]]
     auto list_categories(std::chrono::year_month year_month) const
-        -> std::expected<std::vector<budget::types::category>, budget::types::category_error>
+        -> std::expected<std::vector<budget::types::category>, list_categories_error>
     {
         const auto month = std::ranges::find_if(
             months_, [year_month](const auto &month) { return month.period().year_month == year_month; });
         if (month == months_.end())
         {
-            return std::unexpected{budget::types::category_error::month_not_found};
+            return std::unexpected{list_categories_error::month_not_found};
         }
 
         return month->categories();
@@ -56,13 +110,13 @@ class book
 
     [[nodiscard]]
     auto list_category_budgets(std::chrono::year_month year_month) const
-        -> std::expected<std::vector<budget::types::category_budget>, budget::types::category_error>
+        -> std::expected<std::vector<budget::types::category_budget>, list_category_budgets_error>
     {
         const auto month = std::ranges::find_if(
             months_, [year_month](const auto &month) { return month.period().year_month == year_month; });
         if (month == months_.end())
         {
-            return std::unexpected{budget::types::category_error::month_not_found};
+            return std::unexpected{list_category_budgets_error::month_not_found};
         }
 
         return month->category_budgets();
@@ -71,28 +125,40 @@ class book
     [[nodiscard]]
     auto create_item(std::chrono::year_month year_month, std::string_view name,
                      std::optional<budget::types::category_id> category_id, budget::types::amount expected)
-        -> std::expected<budget::types::item_id, budget::types::item_error>
+        -> std::expected<budget::types::item_id, create_item_error>
     {
         const auto month = std::ranges::find_if(
             months_, [year_month](const auto &month) { return month.period().year_month == year_month; });
         if (month == months_.end())
         {
-            return std::unexpected{budget::types::item_error::month_not_found};
+            return std::unexpected{create_item_error::month_not_found};
         }
 
-        return month->create_item(name, category_id, expected);
+        return month->create_item(name, category_id, expected)
+            .transform_error([](budget::month::create_item_error error) {
+                switch (error)
+                {
+                case budget::month::create_item_error::category_not_found:
+                    return create_item_error::category_not_found;
+                case budget::month::create_item_error::invalid_name:
+                    return create_item_error::invalid_name;
+                case budget::month::create_item_error::duplicate_name:
+                    return create_item_error::duplicate_name;
+                }
+                std::unreachable();
+            });
     }
 
     [[nodiscard]]
     auto list_items(std::chrono::year_month year_month,
                     std::optional<budget::types::category_id> category_id = std::nullopt) const
-        -> std::expected<std::vector<budget::types::item>, budget::types::item_error>
+        -> std::expected<std::vector<budget::types::item>, list_items_error>
     {
         const auto month = std::ranges::find_if(
             months_, [year_month](const auto &month) { return month.period().year_month == year_month; });
         if (month == months_.end())
         {
-            return std::unexpected{budget::types::item_error::month_not_found};
+            return std::unexpected{list_items_error::month_not_found};
         }
 
         return month->items(category_id);
@@ -100,30 +166,49 @@ class book
 
     [[nodiscard]]
     auto remove_item(std::chrono::year_month year_month, budget::types::item_id item_id, bool force = false)
-        -> std::expected<void, budget::types::item_error>
+        -> std::expected<void, remove_item_error>
     {
         const auto month = std::ranges::find_if(
             months_, [year_month](const auto &month) { return month.period().year_month == year_month; });
         if (month == months_.end())
         {
-            return std::unexpected{budget::types::item_error::month_not_found};
+            return std::unexpected{remove_item_error::month_not_found};
         }
 
-        return month->remove_item(item_id, force);
+        return month->remove_item(item_id, force).transform_error([](budget::month::remove_item_error error) {
+            switch (error)
+            {
+            case budget::month::remove_item_error::not_found:
+                return remove_item_error::not_found;
+            case budget::month::remove_item_error::in_use:
+                return remove_item_error::in_use;
+            }
+            std::unreachable();
+        });
     }
 
     [[nodiscard]]
     auto remove_category(std::chrono::year_month year_month, budget::types::category_id category_id, bool force = false)
-        -> std::expected<void, budget::types::category_error>
+        -> std::expected<void, remove_category_error>
     {
         const auto month = std::ranges::find_if(
             months_, [year_month](const auto &month) { return month.period().year_month == year_month; });
         if (month == months_.end())
         {
-            return std::unexpected{budget::types::category_error::month_not_found};
+            return std::unexpected{remove_category_error::month_not_found};
         }
 
-        return month->remove_category(category_id, force);
+        return month->remove_category(category_id, force)
+            .transform_error([](budget::month::remove_category_error error) {
+                switch (error)
+                {
+                case budget::month::remove_category_error::not_found:
+                    return remove_category_error::not_found;
+                case budget::month::remove_category_error::in_use:
+                    return remove_category_error::in_use;
+                }
+                std::unreachable();
+            });
     }
 
     [[nodiscard]]

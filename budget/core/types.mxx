@@ -15,24 +15,6 @@ using item_id = std::uint64_t;
 using date = std::chrono::year_month_day;
 using amount = std::uint32_t;
 
-enum class category_error
-{
-    month_not_found,
-    invalid_name,
-    duplicate_name,
-    not_found,
-    in_use,
-};
-
-enum class item_error
-{
-    month_not_found,
-    category_not_found,
-    invalid_name,
-    duplicate_name,
-    not_found,
-    in_use,
-};
 
 enum class transaction_type : std::uint8_t
 {

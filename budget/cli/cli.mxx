@@ -6,6 +6,7 @@ export module budget.cli;
 
 import budget.application;
 
+import :category;
 import :month;
 
 export namespace budget::cli
@@ -14,11 +15,14 @@ auto run(int argc, char *argv[], budget::application::book_repository &repositor
 {
     CLI::App app{"Budget"};
 
-    month::month_options options;
-    month::add_month_commands(app, options, repository);
+    month::month_options month_options;
+    month::add_month_commands(app, month_options, repository);
+
+    category::category_options category_options;
+    category::add_category_commands(app, category_options, repository);
 
     CLI11_PARSE(app, argc, argv);
 
-    return options.exit_code;
+    return month_options.exit_code != 0 ? month_options.exit_code : category_options.exit_code;
 }
 } // namespace budget::cli

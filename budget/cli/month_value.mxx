@@ -1,0 +1,52 @@
+module;
+
+#include <algorithm>
+#include <charconv>
+#include <chrono>
+#include <optional>
+#include <string>
+#include <string_view>
+
+export module budget.cli:month_value;
+
+export namespace budget::cli::month_value
+{
+auto parse(std::string_view value) -> std::optional<std::chrono::year_month>
+{
+    using namespace std::chrono;
+
+    if (value.size() != 7 || value[4] != '-')
+    {
+        return std::nullopt;
+    }
+
+    int year_value{};
+    unsigned month_value{};
+    const auto year_parse = std::from_chars(value.data(), value.data() + 4, year_value);
+    const auto month_parse = std::from_chars(value.data() + 5, value.data() + value.size(), month_value);
+    const auto is_digit = [](char character) { return character >= '0' && character <= '9'; };
+    const bool has_numeric_fields =
+        std::ranges::all_of(value.substr(0, 4), is_digit) && std::ranges::all_of(value.substr(5), is_digit);
+
+    if (!has_numeric_fields || year_parse.ec != std::errc{} || year_parse.ptr != value.data() + 4 ||
+        month_parse.ec != std::errc{} || month_parse.ptr != value.data() + value.size())
+    {
+        return std::nullopt;
+    }
+
+    const auto requested_month = year{year_value} / std::chrono::month{month_value};
+    if (!requested_month.ok())
+    {
+        return std::nullopt;
+    }
+
+    return requested_month;
+}
+
+auto format(std::chrono::year_month requested_month) -> std::string
+{
+    const auto month_number = static_cast<unsigned>(requested_month.month());
+    return std::to_string(static_cast<int>(requested_month.year())) + "-" + (month_number < 10 ? "0" : "") +
+           std::to_string(month_number);
+}
+} // namespace budget::cli::month_value

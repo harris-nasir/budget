@@ -56,9 +56,9 @@ TEST_CASE("month rejects empty and whitespace-only category names")
     const auto whitespace_result = month.create_category(" \t\r\n");
 
     REQUIRE(!empty_result.has_value());
-    CHECK(empty_result.error() == budget::core::category_error::invalid_name);
+    CHECK(empty_result.error() == budget::core::month::create_category_error::invalid_name);
     REQUIRE(!whitespace_result.has_value());
-    CHECK(whitespace_result.error() == budget::core::category_error::invalid_name);
+    CHECK(whitespace_result.error() == budget::core::month::create_category_error::invalid_name);
     CHECK(month.categories().empty());
     CHECK(month.category_budgets().empty());
 }
@@ -72,7 +72,7 @@ TEST_CASE("month rejects duplicate category names")
 
     REQUIRE(first_result.has_value());
     REQUIRE(!duplicate_result.has_value());
-    CHECK(duplicate_result.error() == budget::core::category_error::duplicate_name);
+    CHECK(duplicate_result.error() == budget::core::month::create_category_error::duplicate_name);
     CHECK(month.categories().size() == 1);
     CHECK(month.category_budgets().size() == 1);
 }
@@ -92,7 +92,7 @@ TEST_CASE("month refuses to remove a category with dependents unless forced")
     const auto result = month.remove_category(category_id);
 
     REQUIRE(!result.has_value());
-    CHECK(result.error() == budget::core::category_error::in_use);
+    CHECK(result.error() == budget::core::month::remove_category_error::in_use);
     CHECK(month.categories().size() == 1);
     CHECK(month.category_budgets().size() == 1);
     CHECK(month.items().size() == 1);
@@ -154,11 +154,11 @@ TEST_CASE("month validates item names and category assignments")
     const auto missing_category = month.create_item("Rent", 42, 1000);
 
     REQUIRE(!empty_name.has_value());
-    CHECK(empty_name.error() == budget::core::item_error::invalid_name);
+    CHECK(empty_name.error() == budget::core::month::create_item_error::invalid_name);
     REQUIRE(!whitespace_name.has_value());
-    CHECK(whitespace_name.error() == budget::core::item_error::invalid_name);
+    CHECK(whitespace_name.error() == budget::core::month::create_item_error::invalid_name);
     REQUIRE(!missing_category.has_value());
-    CHECK(missing_category.error() == budget::core::item_error::category_not_found);
+    CHECK(missing_category.error() == budget::core::month::create_item_error::category_not_found);
     CHECK(month.items().empty());
 }
 
@@ -178,11 +178,11 @@ TEST_CASE("month rejects duplicate item names within the same category assignmen
 
     REQUIRE(first_housing_item.has_value());
     REQUIRE(!duplicate_housing_item.has_value());
-    CHECK(duplicate_housing_item.error() == budget::core::item_error::duplicate_name);
+    CHECK(duplicate_housing_item.error() == budget::core::month::create_item_error::duplicate_name);
     CHECK(travel_item.has_value());
     CHECK(uncategorized_item.has_value());
     REQUIRE(!duplicate_uncategorized_item.has_value());
-    CHECK(duplicate_uncategorized_item.error() == budget::core::item_error::duplicate_name);
+    CHECK(duplicate_uncategorized_item.error() == budget::core::month::create_item_error::duplicate_name);
     CHECK(month.items().size() == 3);
 }
 
@@ -217,7 +217,7 @@ TEST_CASE("month requires force to remove an item referenced by a transaction")
     const auto refused_result = month.remove_item(item_id);
 
     REQUIRE(!refused_result.has_value());
-    CHECK(refused_result.error() == budget::core::item_error::in_use);
+    CHECK(refused_result.error() == budget::core::month::remove_item_error::in_use);
     REQUIRE(month.items().size() == 1);
     const auto forced_result = month.remove_item(item_id, true);
     const auto transactions = month.transactions();
@@ -236,7 +236,7 @@ TEST_CASE("month reports missing items during removal")
     const auto result = month.remove_item(1);
 
     REQUIRE(!result.has_value());
-    CHECK(result.error() == budget::core::item_error::not_found);
+    CHECK(result.error() == budget::core::month::remove_item_error::not_found);
 }
 
 TEST_CASE("month creates transactions")

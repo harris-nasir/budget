@@ -109,11 +109,11 @@ TEST_CASE("book item operations report missing months")
     const auto remove_result = book.remove_item(requested_month, 1);
 
     REQUIRE(!create_result.has_value());
-    CHECK(create_result.error() == budget::core::item_error::month_not_found);
+    CHECK(create_result.error() == budget::core::book::create_item_error::month_not_found);
     REQUIRE(!list_result.has_value());
-    CHECK(list_result.error() == budget::core::item_error::month_not_found);
+    CHECK(list_result.error() == budget::core::book::list_items_error::month_not_found);
     REQUIRE(!remove_result.has_value());
-    CHECK(remove_result.error() == budget::core::item_error::month_not_found);
+    CHECK(remove_result.error() == budget::core::book::remove_item_error::month_not_found);
 }
 
 TEST_CASE("book category operations report missing months")
@@ -128,11 +128,11 @@ TEST_CASE("book category operations report missing months")
     const auto remove_result = book.remove_category(requested_month, 1);
 
     REQUIRE(!create_result.has_value());
-    CHECK(create_result.error() == budget::core::category_error::month_not_found);
+    CHECK(create_result.error() == budget::core::book::create_category_error::month_not_found);
     REQUIRE(!list_result.has_value());
-    CHECK(list_result.error() == budget::core::category_error::month_not_found);
+    CHECK(list_result.error() == budget::core::book::list_categories_error::month_not_found);
     REQUIRE(!budgets_result.has_value());
-    CHECK(budgets_result.error() == budget::core::category_error::month_not_found);
+    CHECK(budgets_result.error() == budget::core::book::list_category_budgets_error::month_not_found);
     REQUIRE(!remove_result.has_value());
-    CHECK(remove_result.error() == budget::core::category_error::month_not_found);
+    CHECK(remove_result.error() == budget::core::book::remove_category_error::month_not_found);
 }

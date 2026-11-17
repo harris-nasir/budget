@@ -1,11 +1,19 @@
-# Uncomment to suppress warnings coming from external libraries.
-#
-#cxx.internal.scope = current
+# Suppress warnings coming from external libraries.
+cxx.internal.scope = current
 
 cxx.std = latest
 cxx.features.modules=true
 
 using cxx
+
+switch $cxx.id
+{
+  case 'gcc' | 'clang' | 'clang-apple' | 'msvc-clang'
+    cxx.coptions += -Wall -Wextra -Wpedantic -Wswitch-enum -Werror=switch-enum
+
+  case 'msvc'
+    cxx.coptions += /W4 /w44062 /we4062
+}
 
 hxx{*}: extension = hxx
 ixx{*}: extension = ixx

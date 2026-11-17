@@ -1,0 +1,125 @@
+module;
+
+#include <chrono>
+#include <expected>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
+export module budget.application:item;
+
+import budget.application.repository;
+import budget.core;
+
+export namespace budget::application::item
+{
+struct create_item_request
+{
+    std::chrono::year_month year_month;
+    std::string name;
+    std::optional<budget::core::category_id> category_id;
+    budget::core::amount expected;
+};
+
+enum class create_item_error
+{
+    month_not_found,
+    category_not_found,
+    invalid_name,
+    duplicate_name,
+};
+
+using create_item_response = std::expected<budget::core::item_id, create_item_error>;
+
+inline auto create_item(budget::application::book_repository &repository, const create_item_request &request)
+    -> create_item_response
+{
+    auto book = repository.load();
+    const auto result = book.create_item(request.year_month, request.name, request.category_id, request.expected)
+                            .transform_error([](budget::core::book::create_item_error error) {
+                                switch (error)
+                                {
+                                case budget::core::book::create_item_error::month_not_found:
+                                    return create_item_error::month_not_found;
+                                case budget::core::book::create_item_error::category_not_found:
+                                    return create_item_error::category_not_found;
+                                case budget::core::book::create_item_error::invalid_name:
+                                    return create_item_error::invalid_name;
+                                case budget::core::book::create_item_error::duplicate_name:
+                                    return create_item_error::duplicate_name;
+                                }
+                                std::unreachable();
+                            });
+    if (result)
+    {
+        repository.save(book);
+    }
+    return result;
+}
+
+struct list_items_request
+{
+    std::chrono::year_month year_month;
+    std::optional<budget::core::category_id> category_id;
+};
+
+enum class list_items_error
+{
+    month_not_found,
+};
+
+using list_items_response = std::expected<std::vector<budget::core::item>, list_items_error>;
+
+inline auto list_items(budget::application::book_repository &repository, const list_items_request &request)
+    -> list_items_response
+{
+    const auto book = repository.load();
+    auto result = book.list_items(request.year_month, request.category_id);
+    if (!result)
+    {
+        return std::unexpected{list_items_error::month_not_found};
+    }
+    return std::move(*result);
+}
+
+struct remove_item_request
+{
+    std::chrono::year_month year_month;
+    budget::core::item_id item_id;
+    bool force{};
+};
+
+enum class remove_item_error
+{
+    month_not_found,
+    not_found,
+    in_use,
+};
+
+using remove_item_response = std::expected<void, remove_item_error>;
+
+inline auto remove_item(budget::application::book_repository &repository, const remove_item_request &request)
+    -> remove_item_response
+{
+    auto book = repository.load();
+    const auto result = book.remove_item(request.year_month, request.item_id, request.force)
+                            .transform_error([](budget::core::book::remove_item_error error) {
+                                switch (error)
+                                {
+                                case budget::core::book::remove_item_error::month_not_found:
+                                    return remove_item_error::month_not_found;
+                                case budget::core::book::remove_item_error::not_found:
+                                    return remove_item_error::not_found;
+                                case budget::core::book::remove_item_error::in_use:
+                                    return remove_item_error::in_use;
+                                }
+                                std::unreachable();
+                            });
+    if (result)
+    {
+        repository.save(book);
+    }
+    return result;
+}
+} // namespace budget::application::item

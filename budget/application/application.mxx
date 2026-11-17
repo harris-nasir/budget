@@ -2,10 +2,36 @@ export module budget.application;
 
 export import budget.application.repository;
 import :category;
+import :item;
 import :month;
 
 export namespace budget::application
 {
+using ::budget::application::category::category_listing;
+using ::budget::application::category::create_category;
+using ::budget::application::category::create_category_error;
+using ::budget::application::category::create_category_request;
+using ::budget::application::category::create_category_response;
+using ::budget::application::category::list_categories;
+using ::budget::application::category::list_categories_error;
+using ::budget::application::category::list_categories_request;
+using ::budget::application::category::list_categories_response;
+using ::budget::application::category::remove_category;
+using ::budget::application::category::remove_category_error;
+using ::budget::application::category::remove_category_request;
+using ::budget::application::category::remove_category_response;
+using ::budget::application::item::create_item;
+using ::budget::application::item::create_item_error;
+using ::budget::application::item::create_item_request;
+using ::budget::application::item::create_item_response;
+using ::budget::application::item::list_items;
+using ::budget::application::item::list_items_error;
+using ::budget::application::item::list_items_request;
+using ::budget::application::item::list_items_response;
+using ::budget::application::item::remove_item;
+using ::budget::application::item::remove_item_error;
+using ::budget::application::item::remove_item_request;
+using ::budget::application::item::remove_item_response;
 using ::budget::application::month::create_month;
 using ::budget::application::month::create_month_error;
 using ::budget::application::month::create_month_request;
@@ -15,18 +41,5 @@ using ::budget::application::month::list_months;
 using ::budget::application::month::list_months_error;
 using ::budget::application::month::list_months_request;
 using ::budget::application::month::list_months_response;
-using ::budget::application::category::create_category;
-using ::budget::application::category::create_category_error;
-using ::budget::application::category::create_category_request;
-using ::budget::application::category::create_category_response;
-using ::budget::application::category::category_listing;
-using ::budget::application::category::list_categories;
-using ::budget::application::category::list_categories_error;
-using ::budget::application::category::list_categories_request;
-using ::budget::application::category::list_categories_response;
-using ::budget::application::category::remove_category;
-using ::budget::application::category::remove_category_error;
-using ::budget::application::category::remove_category_request;
-using ::budget::application::category::remove_category_response;
 
 } // namespace budget::application
